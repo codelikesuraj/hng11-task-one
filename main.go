@@ -30,11 +30,12 @@ func main() {
 
 		ip := getIPAddressFromRequest(r)
 		city := getCityFromIpAddress(ip)
+		temp := getTempFromCity(city)
 
 		jsonResponse(w, map[string]string{
 			"client_ip": ip,
 			"location":  city,
-			"greeting":  fmt.Sprintf("Hello, %s!, the temperature is 11 degrees Celsius in %s", name, city),
+			"greeting":  fmt.Sprintf("Hello, %s!, the temperature is %.1f degrees Celsius in %s", name, temp, city),
 		})
 	})
 
@@ -42,6 +43,34 @@ func main() {
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal("could not start server:", err)
 	}
+}
+
+func getTempFromCity(city string) float64 {
+	_ = city
+	city = "lagos"
+	var client http.Client
+
+	resp, err := client.Get(fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", os.Getenv("WEATHER_API_KEY"), city))
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var data map[string]interface{}
+
+		err := json.NewDecoder(resp.Body).Decode(&data)
+		log.Println(data)
+		if err == nil {
+			if curr, ok := data["current"].(map[string]interface{}); ok {
+				if temp, ok := curr["temp_c"].(float64); ok {
+					return temp
+				}
+			}
+		}
+	}
+
+	return 0
 }
 
 func getIPAddressFromRequest(r *http.Request) string {
