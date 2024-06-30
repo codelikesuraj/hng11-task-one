@@ -46,8 +46,6 @@ func main() {
 }
 
 func getTempFromCity(city string) float64 {
-	_ = city
-	city = "lagos"
 	var client http.Client
 
 	resp, err := client.Get(fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%s&q=%s&aqi=no", os.Getenv("WEATHER_API_KEY"), city))
