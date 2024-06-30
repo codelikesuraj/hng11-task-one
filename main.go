@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func jsonResponse(w http.ResponseWriter, v map[string]string) {
@@ -21,7 +22,7 @@ func main() {
 		port = "8080"
 	}
 
-	http.HandleFunc("/api/hello/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/api/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		name := r.URL.Query().Get("visitor_name")
@@ -34,12 +35,14 @@ func main() {
 		}
 
 		jsonResponse(w, map[string]string{
-			"client_ip": r.RemoteAddr,
+			"client_ip": strings.Split(r.RemoteAddr, ":")[0],
 			"location":  "New York",
 			"greeting":  fmt.Sprintf("Hello, %s!, the temperature is 11 degrees Celsius in New York", name),
 		})
 	})
 
 	log.Println("listening on", port)
-	http.ListenAndServe(":"+port, nil)
+	if err := http.ListenAndServe(":"+port, nil); err != nil {
+		log.Fatal("could not start server:", err)
+	}
 }
