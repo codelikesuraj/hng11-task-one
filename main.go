@@ -28,10 +28,13 @@ func main() {
 			return
 		}
 
+		ip := getIPAddressFromRequest(r)
+		city := getCityFromIpAddress(ip)
+
 		jsonResponse(w, map[string]string{
-			"client_ip": getIPAddressFromRequest(r),
-			"location":  "New York",
-			"greeting":  fmt.Sprintf("Hello, %s!, the temperature is 11 degrees Celsius in New York", name),
+			"client_ip": ip,
+			"location":  city,
+			"greeting":  fmt.Sprintf("Hello, %s!, the temperature is 11 degrees Celsius in %s", name, city),
 		})
 	})
 
@@ -42,27 +45,36 @@ func main() {
 }
 
 func getIPAddressFromRequest(r *http.Request) string {
-	ips := r.Header.Get("X-Forwarded-For")
-	splitIps := strings.Split(ips, ",")
+	ips := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+	if len(ips) > 0 {
+		return net.ParseIP(ips[0]).String()
+	}
 
-	if len(splitIps) > 0 {
-		netIP := net.ParseIP(splitIps[len(splitIps)-1])
-		if netIP != nil {
-			return ""
+	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
+	return ip
+}
+
+func getCityFromIpAddress(ip string) string {
+	var client http.Client
+
+	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s", ip))
+	if err != nil {
+		return "unknown"
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusOK {
+		var data struct {
+			Status string
+			City   string
+		}
+		err := json.NewDecoder(resp.Body).Decode(&data)
+		if err == nil && data.Status == "success" && data.City != "" {
+			return data.City
 		}
 	}
 
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return ""
-	}
-
-	netIP := net.ParseIP(ip)
-	if netIP != nil {
-		return netIP.String()
-	}
-
-	return ""
+	return "unknown"
 }
 
 func jsonResponse(w http.ResponseWriter, v map[string]string) {
