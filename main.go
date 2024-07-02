@@ -68,7 +68,7 @@ func getTempFromCity(city string) float64 {
 		}
 	}
 
-	return 0
+	return 99.9
 }
 
 func getIPAddressFromRequest(r *http.Request) string {
